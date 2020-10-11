@@ -33,7 +33,7 @@ class Agent:
         self.agentHasArrow = True
         self.actionList = []
         self.visited = set()
-        self.frontier = set()
+        self.frontier = []
         self.direction = Orientation.RIGHT
         self.location = (1, 1)
         self.stench = set()
@@ -51,7 +51,7 @@ class Agent:
         self.updatePercept(percept)
 
         # If there is no action list determine actions
-        if (not self.actionList):
+        if (len(self.actionList) == 0):
             # Look for gold if it is not found yet
             if (not self.agentHasGold):
                 # Grab gold if location is known
@@ -59,11 +59,26 @@ class Agent:
                     self.actionList += self.searchEngine.FindPath(
                         list(self.location), self.direction,
                         list(self.glitter), Orientation.RIGHT)
-                # Find new locations to search
-                else:
+                # Find new locations to search from frontier
+                elif len(self.frontier) > 0:
                     self.actionList += self.searchEngine.FindPath(
                         list(self.location), self.direction,
-                        list(self.frontier.pop()), Orientation.RIGHT)
+                        list(self.frontier.pop(0)), Orientation.RIGHT)
+                # No locations on frontier, solve wumpus/pit problems
+                else:
+                    self.findSafeLocation()
+                    # If safeLocations adds to frontier pop new location
+                    if len(self.frontier) > 0:
+                        self.actionList += self.searchEngine.FindPath(
+                            list(self.location), self.direction,
+                            list(self.frontier.pop(0)), Orientation.RIGHT)
+                    # If No more safe locations to search, return to ladder
+                    #       without gold
+                    else:
+                        self.actionList += self.searchEngine.FindPath(
+                            self.location, self.direction, [1, 1, ],
+                            Orientation.RIGHT)
+                        self.actionList.append(Action.CLIMB)
             # Go to ladder if gold is already collected
             else:
                 self.actionList += self.searchEngine.FindPath(
@@ -131,6 +146,9 @@ class Agent:
         Returns:
             None
         '''
+        self.visited.add(self.location)
+
+        self.percept = percept
         self.worldSize = max(self.location[0], self.location[1])
         if percept.breeze:
             self.breeze.add(self.location)
@@ -141,7 +159,7 @@ class Agent:
         if percept.glitter:
             # Track location of glitter
             self.glitter = self.location
-            self.actionList.append(Action.GRAB)
+            self.actionList = [Action.GRAB]
         if percept.scream:
             # Track if wumpus is alive
             self.wumpus = False
@@ -154,23 +172,54 @@ class Agent:
         # Add safe adjacent locations
         self.addAdjacent()
 
-        self.visited.add(self.location)
-
     def addAdjacent(self):
-        adjacent = []
-        adjacent.append(tuple([self.location[0] + 1, self.location[1]]))
-        adjacent.append(tuple([self.location[0] - 1, self.location[1]]))
-        adjacent.append(tuple([self.location[0], self.location[1] + 1]))
-        adjacent.append(tuple([self.location[0], self.location[1] - 1]))
-        print("current", self.location)
+        adjacent = self.getAdjacent(self.location)
+        # print("current", self.location)
+        # print("breeze", self.breeze)
+        # print("stench", self.stench)
         for i in adjacent:
-            print(i)
-            if i not in self.breeze and i not in self.stench:
-                if i[0] > 0 and i[1] > 0 and i[0]:
-                    if i not in self.visited:
-                        self.frontier.add(i)
+            # if i not in self.breeze and i not in self.stench:
+            if self.location not in self.breeze and self.location \
+                    not in self.stench:
+                if i[0] > 0 and i[1] > 0:
+                    if i not in self.visited and i not in self.frontier:
+                        self.frontier.append(i)
+                        print("adding", i)
                     self.searchEngine.AddSafeLocation(i[0], i[1])
-        print("safe", self.searchEngine.safeLocations)
+        # print("safe", self.searchEngine.safeLocations)
+        # print("visited", self.visited)
+        # print("frontier", self.frontier)
+        # print("actionList", self.actionList)
+
+    def findSafeLocation(self):
+        for i in self.stench:
+            adjacent = self.getAdjacent(i)
+            unexplored = set()
+            for j in adjacent:
+                if j not in self.visited and j[0] > 0 and j[1] > 0:
+                    unexplored.add(j)
+            # Unexplored Adjacent to stench
+            for j in unexplored:
+                # print("unexplored", j)
+                unexploredAdjacent = self.getAdjacent(j)
+                # Tiles around unexplored
+                for k in unexploredAdjacent:
+                    # print("aroundUnexplored", k,
+                    #       k in self.visited, k not in self.stench)
+                    if k in self.visited and k not in self.stench and \
+                            j not in self.frontier and j not in self.visited:
+                        self.frontier.append(j)
+                        self.searchEngine.AddSafeLocation(j[0], j[1])
+                        break
+        # print(self.frontier)
+
+    def getAdjacent(self, location: tuple):
+        adjacent = []
+        adjacent.append(tuple([location[0] + 1, location[1]]))
+        adjacent.append(tuple([location[0] - 1, location[1]]))
+        adjacent.append(tuple([location[0], location[1] + 1]))
+        adjacent.append(tuple([location[0], location[1] - 1]))
+        return adjacent
 
     def GameOver(self, score):
         pass

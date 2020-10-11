@@ -8,27 +8,22 @@ import Search
 import Percept
 
 
-class location():
-    '''
-    A class that checks if a location is valid
-    '''
-
-    def __init__(self, Agent, x, y):
-        '''
-
-        '''
-
-
 class Agent:
     def __init__(self):
-        self.searchEngine = Search.SearchEngine()
+        '''
+        Initialze the Agent for the first time
+        '''
         self.Initialize()
+        self.searchEngine = Search.SearchEngine()
 
     def __del__(self):
         pass
 
     def Initialize(self):
-
+        '''
+        Called on Agent between test runs to reset to initial state
+        All information gathered about a test world is kept
+        '''
         self.agentHasGold = False
         self.agentHasArrow = True
         self.actionList = []
@@ -46,6 +41,15 @@ class Agent:
 
     # Input percept is a dictionary [perceptName: boolean]
     def Process(self, percept: Percept.Percept) -> int:
+        '''
+        Process a turn inside the wumpus world
+
+        Args:
+            percept: a Percept object containing information about
+                the current tile
+        Return:
+            Action to take on world
+        '''
 
         # Update World state with incoming information
         self.updatePercept(percept)
@@ -90,6 +94,15 @@ class Agent:
         return action
 
     def processAction(self, action: int):
+        '''
+        A function that updates the Agent with the action that is getting
+        called.
+
+        Args:
+            action: the action update the world for
+        Returns:
+            None
+        '''
 
         def CLIMB():
             # Update action for climbing
@@ -173,6 +186,14 @@ class Agent:
         self.addAdjacent()
 
     def addAdjacent(self):
+        '''
+        Add all valid adjacent locations of the agents current location to the
+            frontier
+        Args:
+            None
+        Returns:
+            None
+        '''
         adjacent = self.getAdjacent(self.location)
         # print("current", self.location)
         # print("breeze", self.breeze)
@@ -192,6 +213,14 @@ class Agent:
         # print("actionList", self.actionList)
 
     def findSafeLocation(self):
+        '''
+        Attempt to find a safe location around the wumpus
+
+        Args:
+            None
+        Return:
+            None
+        '''
         for i in self.stench:
             adjacent = self.getAdjacent(i)
             unexplored = set()
@@ -214,6 +243,14 @@ class Agent:
         # print(self.frontier)
 
     def getAdjacent(self, location: tuple):
+        '''
+        Get the adjacent tiles for the location passed in
+
+        Args:
+            location: location to find adjacent tiles of
+        Return:
+            List tuples represent "location's" adjacent tiles
+        '''
         adjacent = []
         adjacent.append(tuple([location[0] + 1, location[1]]))
         adjacent.append(tuple([location[0] - 1, location[1]]))
@@ -222,4 +259,13 @@ class Agent:
         return adjacent
 
     def GameOver(self, score):
+        '''
+        Called when the wumpus world ends
+
+        Args:
+            None
+
+        Returns:
+            None
+        '''
         pass
